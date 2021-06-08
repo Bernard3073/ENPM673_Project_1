@@ -2,13 +2,11 @@ import scipy
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
-
-def dist(p1, p2):
-    return np.sqrt((p1[0]-p2[0])**2 + (p1[1]-p2[1])**2)
+import copy
 
 def main():
-    cap = cv2.VideoCapture('/home/bernard/ENPM673/Project_1/Tag1.mp4')
-    cap.set(cv2.CAP_PROP_FRAME_COUNT, 1)
+    cap = cv2.VideoCapture('./Tag1.mp4')
+    cap.set(cv2.CAP_PROP_POS_FRAMES, 1)
     ret, frame = cap.read()
     
     scale_percent = 60 # percent of original size
@@ -29,15 +27,14 @@ def main():
     
     
     # Circular HPF mask, center circle is 0, remaining all ones
-    r, c = gray.shape
-    row, col = int(r/2), int(c/2)
-    mask = np.ones((r,c))
-    r = 480
-    center = [row, col]
-    for x in range(c):
-        for y in range(r):
-            if dist((y,x), center) < r:
-                mask[y, x] = 0
+    row, col = gray.shape
+    center_row, center_col = int(row/2), int(col/2)
+    mask = np.ones((row, col), np.uint8)
+    r = 100
+    center = [center_row, center_col]
+    x, y = np.ogrid[:row, :col]
+    mask_area = (x - center[0])**2 + (y - center[1])**2 <= r**2
+    mask[mask_area] = 0
     
     # Multiple fourier transformed image with mask values
     fshift = dft_shift*mask
@@ -50,11 +47,14 @@ def main():
     img_back = np.fft.ifft2(f_ishift)
     # Magnitude spectrum of the image domain
     img_back = np.abs(img_back)
+
+    
     
     plt.subplot(121), plt.imshow(frame, cmap = 'gray'), plt.title("Original Image")
-    plt.subplot(122),plt.imshow(img_back, cmap = 'gray'), plt.title("a")
+    plt.subplot(122),plt.imshow(img_back, cmap = 'gray'), plt.title("High Pass Filter (FFT)")
     plt.show()
     
+    cv2.waitKey(0)
     cap.release()
     cv2.destroyAllWindows()
 
