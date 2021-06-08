@@ -5,10 +5,15 @@ from matplotlib import pyplot as plt
 import copy
 
 def main():
+    # ------
+    # Use high pass filter to extract the contour of the tag 
+    # ------
     cap = cv2.VideoCapture('./Tag1.mp4')
     cap.set(cv2.CAP_PROP_POS_FRAMES, 1)
     ret, frame = cap.read()
-    
+    '''
+    Scale down the video file to make the process faster
+    '''
     scale_percent = 60 # percent of original size
     width = int(frame.shape[1] * scale_percent / 100)
     height = int(frame.shape[0] * scale_percent / 100)
@@ -30,8 +35,10 @@ def main():
     row, col = gray.shape
     center_row, center_col = int(row/2), int(col/2)
     mask = np.ones((row, col), np.uint8)
+    # the radius for the circular mask
     r = 100
     center = [center_row, center_col]
+    # np.ogrid() acts as np.arrange(), usually is used to create a mask
     x, y = np.ogrid[:row, :col]
     mask_area = (x - center[0])**2 + (y - center[1])**2 <= r**2
     mask[mask_area] = 0
@@ -48,8 +55,9 @@ def main():
     # Magnitude spectrum of the image domain
     img_back = np.abs(img_back)
 
-    
-    
+    '''
+    Plot the result
+    '''
     plt.subplot(121), plt.imshow(frame, cmap = 'gray'), plt.title("Original Image")
     plt.subplot(122),plt.imshow(img_back, cmap = 'gray'), plt.title("High Pass Filter (FFT)")
     plt.show()
