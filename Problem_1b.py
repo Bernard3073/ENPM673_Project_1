@@ -13,11 +13,15 @@ import os
 import argparse
 
 
-
 def find_tag(frame):
+    '''
+    extract the tag from the paper
+    '''
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     edges = cv2.Canny(gray, 50, 200)
-    contours, hierarchy = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[-2:]
+    # find contours in the edged image, keep only the largest ones
+    # contours, hierarchy = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[-2:]  #[-2:] ?
+    contours, hierarchy = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     contours = sorted(contours, key=cv2.contourArea, reverse=True)
     squares = []
     # ===========================================================================
@@ -77,7 +81,6 @@ def get_ar_tag_id(tag_image):
 
 def create_arg_parser():
     # Creates and returns the ArgumentParser object
-
     parser = argparse.ArgumentParser(description='Description of my program.')
     parser.add_argument('inputDirectory',
                     help='Path to the input tag directory.')
@@ -85,11 +88,13 @@ def create_arg_parser():
 
 
 def main(path):
-    frame = cv2.imread(path)   
+    frame = cv2.imread(path)  
+    '''
+    Scale down the image 
+    ''' 
     dim = 80
     frame = cv2.resize(frame, (dim, dim), interpolation = cv2.INTER_AREA)
-    
-    
+    # find the tag
     contour = find_tag(frame) 
     
     cv2.drawContours(frame, contour, -1, (0,255,0), thickness = 2)
@@ -101,6 +106,9 @@ def main(path):
     cv2.destroyAllWindows() 
 
 if __name__ == "__main__":
+    '''
+    Read the input file directory through the command line
+    '''
     arg_parser = create_arg_parser()
     parsed_args = arg_parser.parse_args(sys.argv[1:])
     if os.path.exists(parsed_args.inputDirectory):

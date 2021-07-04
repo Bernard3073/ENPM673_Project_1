@@ -103,22 +103,24 @@ def rotation_and_translation_mat(K, H):
 
 def draw_cube(img, corner_pts):
     corner_pts = np.int32(corner_pts).reshape(-1,2)
+    # Draw ground floor
     img = cv2.drawContours(img, [corner_pts[:4]], -1,(0,0,255), 3)
+    # Draw pillars
     for i,j in zip(range(4),range(4,8)):
         img = cv2.line(img, tuple(corner_pts[i]), tuple(corner_pts[j]),(0,0,255), 3)
+    # Draw top layer
     img = cv2.drawContours(img, [corner_pts[4:]],-1,(0,0,255), 3)
     return img
 
 def project_cube(H_mat, img):
-    # https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_calib3d/py_pose/py_pose.html
     axis = np.float32([[0,0,0],
-                              [0,cube_dim,0],
-                              [cube_dim,cube_dim,0],
-                              [cube_dim,0,0],
-                              [0,0,-cube_dim],
-                              [0,cube_dim,-cube_dim],
-                              [cube_dim,cube_dim,-cube_dim],
-                              [cube_dim,0,-cube_dim]])
+                    [0,cube_dim,0],
+                    [cube_dim,cube_dim,0],
+                    [cube_dim,0,0],
+                    [0,0,-cube_dim],
+                    [0,cube_dim,-cube_dim],
+                    [cube_dim,cube_dim,-cube_dim],
+                    [cube_dim,0,-cube_dim]])
     K = np.array([[1406.08415449821,0,0],
            [2.20679787308599, 1417.99930662800,0],
            [1014.13643417416, 566.347754321696,1]])
@@ -127,11 +129,10 @@ def project_cube(H_mat, img):
     # Calculate the Rotation Matrix and Translation Vector instead of Projection Matrix
     R_mat, t_vector = rotation_and_translation_mat(K, H_mat)
     # Project 3D points to image plane
-    proj_corner_pts, jacobian = cv2.projectPoints(axis, R_mat, t_vector, K, np.zeros((1, 4)))
+    proj_corner_pts, _ = cv2.projectPoints(axis, R_mat, t_vector, K, np.zeros((1, 4)))
     
     img = draw_cube(img, proj_corner_pts)
 
-    
     return img
 
 def main(video_dir):

@@ -22,7 +22,7 @@ def find_tag(frame):
     # Bilateral Filter has a nice property of removing noise while still preserving the actual edges
     blur = cv2.bilateralFilter(gray, 15, 75, 75)
     edges = cv2.Canny(blur, 50, 200)
-    contours, hierarchy = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[-2:]
+    contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)[-2:]
     contours = sorted(contours, key=cv2.contourArea, reverse=True)
     squares = []
     # ===========================================================================
@@ -34,8 +34,10 @@ def find_tag(frame):
     # =============================================================================
     
     for cnt in contours:
+        # Contour Approximation
         cnt_len = cv2.arcLength(cnt, True)
         cnt = cv2.approxPolyDP(cnt, 0.015*cnt_len, True) # 0.02 better than 0.01
+        # If it is square
         if len(cnt) == 4:
             if 20 < cv2.contourArea(cnt) < 6000: 
                 squares.append(cnt)
@@ -75,11 +77,13 @@ def homography(src, dst):
 
 
 def warpPerspective(H_mat, src_img, dest_img, dest_pts):
+    # np.linalg.pinv() will still work if the determinant of the matrix is zero
     H_inv = np.linalg.pinv(H_mat)
     H_inv = H_inv / H_inv[2][2]
     
     dest_img_copy = copy.deepcopy(dest_img)
     src_img_dim = src_img.shape
+    # Bound it by the destination points
     col_min, row_min = np.min(dest_pts, axis=0) 
     col_max, row_max = np.max(dest_pts, axis=0)
     
@@ -88,7 +92,8 @@ def warpPerspective(H_mat, src_img, dest_img, dest_pts):
             dest_pt = np.float32([x_ind, y_ind, 1]).T
             src_pt = H_inv @ dest_pt
             src_pt = (src_pt/src_pt[2]).astype(int)
-            if -1 < src_pt[1] < src_img_dim[0] and -1 < src_pt[0] < src_img_dim[1]:
+            # Check if the src points is in the bounded area
+            if 0 <= src_pt[1] < src_img_dim[0] and 0 <= src_pt[0] < src_img_dim[1]:
                     dest_img_copy[y_ind, x_ind] = src_img[src_pt[1], src_pt[0]]
     
     
@@ -102,13 +107,12 @@ def warped_img(src_img, dest_img, src_pts, dest_pts):
     return warped
 
 
-
-
-
 def get_warped_tag(img, tag_ls):
     warped_tag = []
-    dest_img = copy.deepcopy(img[:dim, :dim])
-    dest_img[:, :] = 0
+    # dest_img = copy.deepcopy(img[:dim, :dim])
+    # dest_img[:, :] = 0
+    dest_img = np.zeros_like(img)
+    # If the tag is found
     if len(tag_ls) > 0:
         for key in tag_ls:
             warp = warped_img(img, dest_img, np.float32(order_points(key[:,0])), pic)
@@ -117,7 +121,8 @@ def get_warped_tag(img, tag_ls):
 
 def is_cell_white(cell):
     threshold = 200
-    cell_to_gray = cv2.cvtColor((cell), cv2.COLOR_BGR2GRAY) if len(cell.shape) > 2 else cell
+    # cell_to_gray = cv2.cvtColor((cell), cv2.COLOR_BGR2GRAY) if len(cell.shape) > 2 else cell
+    cell_to_gray = cv2.cvtColor((cell), cv2.COLOR_BGR2GRAY)
     return 1 if (np.mean(cell_to_gray) >= threshold) else 0
 
 def get_ar_tag_id(tag_image):
@@ -179,7 +184,7 @@ def main(video_dir):
     cap = cv2.VideoCapture(video_dir)
     testudo_img = cv2.imread('./testudo.png')
     testudo_img = cv2.resize(testudo_img, (dim, dim))
-    testudo_width, testudo_height, channel = testudo_img.shape
+    testudo_width, testudo_height, _ = testudo_img.shape
     testudo_corners = np.float32([[0, 0], 
                                  [testudo_width-1, 0],
                                  [testudo_width-1, testudo_height-1],
@@ -198,8 +203,7 @@ def main(video_dir):
             width = int(frame.shape[1] * scale_percent / 100)
             height = int(frame.shape[0] * scale_percent / 100)
             frame = cv2.resize(frame, (width, height), interpolation = cv2.INTER_AREA)
-            
-            # img_copy_for_id = copy.deepcopy(frame)
+
             img_copy_for_testudo = copy.deepcopy(frame)
             
             tag_contour_ls = find_tag(frame) 
