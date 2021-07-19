@@ -32,7 +32,10 @@ int main(int argc, char** argv) {
         // Capture frame-by-frame
         cap >> frame;
         if(frame.empty()) break;
-
+        double scale_percent = 60.0;
+        double width = frame.cols*scale_percent/100.0; 
+        double height = frame.rows*scale_percent/100.0;
+        resize(frame, frame, Size(width, height), INTER_AREA);
         // Find contour
         Mat gray, blur, edges;
         cvtColor(frame, gray, COLOR_BGR2GRAY);
@@ -43,13 +46,15 @@ int main(int argc, char** argv) {
         vector<Vec4i> hierarchy;
 
         findContours( edges, contours, hierarchy, RETR_TREE, CHAIN_APPROX_SIMPLE, Point(0, 0) );
-        /// Draw contours
-        Mat drawing = Mat::zeros(edges.size(), CV_8UC3 );
-        for( int i = 0; i< contours.size(); i++ )
-        {
-            Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
-            drawContours( drawing, contours, i, color, 2, 8, hierarchy, 0, Point() );
-        }
+        
+        // Draw contours
+        // Mat drawing = Mat::zeros(edges.size(), CV_8UC3 );
+        // for( int i = 0; i< contours.size(); i++ )
+        // {
+        //     Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
+        //     drawContours( drawing, contours, i, color, 2, 8, hierarchy, 0, Point() );
+        // }
+
         // ref: https://stackoverflow.com/questions/13495207/opencv-c-sorting-contours-by-their-contourarea
         sort(contours.begin(), contours.end(), 
             [](const vector<Point>& c1, const vector<Point>& c2){
@@ -62,12 +67,25 @@ int main(int argc, char** argv) {
             double p = arcLength(c, true);
             vector<Point> approx;
             approxPolyDP(c, approx, 0.02*p, true);
-            if(approx.size()==4){
-                // if(contourArea(approx) > 20 && contourArea(approx) < 6000){
-                //     squares.push_back(approx);
-                // }
+            // if(approx.size()==4){
+            //     if(contourArea(approx) > 20.0 && contourArea(approx) < 5000.0){
+            //         squares.push_back(approx);
+            //         cout << contourArea(approx) << endl; 
+            //     }
+            // }
+            if(contourArea(approx) > 20.0 && contourArea(approx) < 5000.0){
                 squares.push_back(approx);
+                cout << contourArea(approx) << endl; 
             }
+        }
+
+        // Draw contours
+        Mat drawing = Mat::zeros(edges.size(), CV_8UC3);
+        for( int i = 0; i< squares.size(); i++ )
+        {
+            // Scalar color = Scalar( rng.uniform(0, 255), rng.uniform(0,255), rng.uniform(0,255) );
+            Scalar color = Scalar(0,0,255);
+            drawContours( drawing, squares, i, color, 2, 8);
         }
 
         imshow( "Result window", drawing );
